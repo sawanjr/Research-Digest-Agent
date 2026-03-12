@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Research Digest Agent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Poppins:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="shape shape-a"></div>
+    <div class="shape shape-b"></div>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>Research Digest Agent</h1>
+          <p class="subtitle">Add sources and generate an evidence-backed digest in one run.</p>
+        </div>
+        <button type="button" id="open-settings" class="secondary top-settings">LLM Settings</button>
+      </header>
+
+      <section class="workspace">
+        <form id="run-form" class="form-grid">
+          <div class="field">
+            <label for="topic">Topic</label>
+            <input id="topic" type="text" name="topic" placeholder="LLM scaling tradeoffs" required />
+          </div>
+
+          <div class="field">
+            <label for="url-entry">Source URLs</label>
+            <div class="url-box" id="url-box">
+              <div class="chip-list" id="url-chip-list"></div>
+              <input
+                id="url-entry"
+                type="text"
+                autocomplete="off"
+                placeholder="Paste one URL and press Enter"
+              />
+            </div>
+            <small>Press Enter after each URL. Press Backspace on empty input to remove last URL.</small>
+          </div>
+
+          <div class="field">
+            <label for="folder_path">Local folder path</label>
+            <div class="picker-row">
+              <input id="folder_path" type="text" name="folder_path" placeholder="sample_inputs/local_sources" />
+              <button type="button" id="pick-source-folder" class="secondary">Browse</button>
+            </div>
+            <small id="source-status">No local folder selected.</small>
+          </div>
+
+          <div class="field small-field">
+            <label for="grouping_threshold">Clustering distance threshold</label>
+            <input id="grouping_threshold" type="number" name="grouping_threshold" step="0.01" value="0.40" />
+            <small class="micro-help">
+              Lower values (e.g. 0.25-0.40) make stricter clusters with fewer merged claims. Higher values (e.g. 0.50-0.70) merge broader paraphrases into the same cluster.
+            </small>
+          </div>
+
+          <div class="actions">
+            <button type="submit" id="run-button" class="primary">Run Agent</button>
+          </div>
+        </form>
+
+        <section class="result-panel" aria-live="polite">
+          <h2>Run Result</h2>
+          <div id="result" class="result ready">Ready.</div>
+          <div id="result-meta" class="result-meta"></div>
+
+          <div class="download-row">
+            <button type="button" id="download-digest" class="secondary download-button" disabled>
+              Download digest.md
+            </button>
+            <button type="button" id="download-json" class="secondary download-button" disabled>
+              Download sources.json
+            </button>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-head">
+              <h3>Digest</h3>
+              <div class="preview-actions">
+                <button type="button" id="show-digest" class="secondary tiny-button" disabled>Show Raw</button>
+                <button type="button" id="render-digest" class="secondary tiny-button" disabled>
+                  Render Preview
+                </button>
+                <button
+                  type="button"
+                  id="fullscreen-digest"
+                  class="secondary icon-button"
+                  title="Open fullscreen"
+                  aria-label="Open digest fullscreen"
+                  disabled
+                >
+                  ⛶
+                </button>
+              </div>
+            </div>
+            <pre id="digest-preview" class="hidden"></pre>
+            <div id="digest-rendered" class="markdown-view hidden"></div>
+          </div>
+
+          <div class="preview-card">
+            <div class="preview-head">
+              <h3>Sources JSON</h3>
+              <div class="preview-actions">
+                <button type="button" id="show-json" class="secondary tiny-button" disabled>Show JSON</button>
+                <button
+                  type="button"
+                  id="fullscreen-json"
+                  class="secondary icon-button"
+                  title="Open fullscreen"
+                  aria-label="Open json fullscreen"
+                  disabled
+                >
+                  ⛶
+                </button>
+              </div>
+            </div>
+            <pre id="json-preview" class="hidden"></pre>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <input id="source-folder-fallback" type="file" webkitdirectory directory multiple hidden />
+
+    <div id="settings-modal" class="modal-backdrop hidden" aria-hidden="true">
+      <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <h2 id="settings-title">LLM Settings</h2>
+
+        <div class="field small-field">
+          <label for="settings-provider">Provider</label>
+          <select id="settings-provider">
+            <option value="groq">Groq</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label for="settings-api-key">API key</label>
+          <input
+            id="settings-api-key"
+            type="password"
+            placeholder="Paste key from UI"
+            autocomplete="off"
+          />
+          <small>Saved in this browser. Sent as X-API-KEY on run.</small>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" id="save-settings" class="primary">Save</button>
+          <button type="button" id="close-settings" class="secondary">Close</button>
+        </div>
+        <small id="settings-status">No key saved yet.</small>
+      </section>
+    </div>
+
+    <div id="preview-modal" class="modal-backdrop hidden" aria-hidden="true">
+      <section class="modal-card preview-modal-card" role="dialog" aria-modal="true" aria-labelledby="preview-modal-title">
+        <div class="preview-modal-head">
+          <h2 id="preview-modal-title">Preview</h2>
+          <button type="button" id="close-preview-modal" class="secondary tiny-button">Close</button>
+        </div>
+        <div id="preview-modal-body" class="preview-modal-body"></div>
+      </section>
+    </div>
+
+    <script>
+      const form = document.getElementById("run-form");
+      const runButton = document.getElementById("run-button");
+      const resultElement = document.getElementById("result");
+      const resultMetaElement = document.getElementById("result-meta");
+      const digestPreviewElement = document.getElementById("digest-preview");
+      const digestRenderedElement = document.getElementById("digest-rendered");
+      const jsonPreviewElement = document.getElementById("json-preview");
+      const downloadDigestButton = document.getElementById("download-digest");
+      const downloadJsonButton = document.getElementById("download-json");
+      const showDigestButton = document.getElementById("show-digest");
+      const renderDigestButton = document.getElementById("render-digest");
+      const fullscreenDigestButton = document.getElementById("fullscreen-digest");
+      const showJsonButton = document.getElementById("show-json");
+      const fullscreenJsonButton = document.getElementById("fullscreen-json");
+      const urlEntry = document.getElementById("url-entry");
+      const urlChipList = document.getElementById("url-chip-list");
+      const sourceStatus = document.getElementById("source-status");
+      const folderPathInput = document.getElementById("folder_path");
+      const sourceFolderFallback = document.getElementById("source-folder-fallback");
+      const pickSourceFolderButton = document.getElementById("pick-source-folder");
+      const settingsModal = document.getElementById("settings-modal");
+      const openSettingsButton = document.getElementById("open-settings");
+      const closeSettingsButton = document.getElementById("close-settings");
+      const saveSettingsButton = document.getElementById("save-settings");
+      const settingsProviderInput = document.getElementById("settings-provider");
+      const settingsApiKeyInput = document.getElementById("settings-api-key");
+      const settingsStatus = document.getElementById("settings-status");
+      const previewModal = document.getElementById("preview-modal");
+      const previewModalTitle = document.getElementById("preview-modal-title");
+      const previewModalBody = document.getElementById("preview-modal-body");
+      const closePreviewModalButton = document.getElementById("close-preview-modal");
+
+      const SETTINGS_KEY = "researchAgentLlmSettings";
+
+      const supportedExtensions = [".txt", ".html", ".htm"];
+      const urlChips = [];
+      let selectedSourceFiles = [];
+      let llmSettings = { api_provider: "groq", api_key: null };
+      let latestDigestContent = "";
+      let latestSourcesJsonContent = "";
+      let digestRawVisible = false;
+      let digestRenderMode = false;
+      let jsonVisible = false;
+
+      function parseApiError(detail) {
+        if (typeof detail === "string") {
+          return detail;
+        }
+        if (Array.isArray(detail)) {
+          return detail
+            .map((item) => {
+              if (typeof item === "string") {
+                return item;
+              }
+              if (item && typeof item === "object") {
+                const loc = Array.isArray(item.loc) ? item.loc.join(".") : "request";
+                const msg = typeof item.msg === "string" ? item.msg : JSON.stringify(item);
+                return `${loc}: ${msg}`;
+              }
+              return String(item);
+            })
+            .join("; ");
+        }
+        if (detail && typeof detail === "object") {
+          return typeof detail.message === "string" ? detail.message : JSON.stringify(detail);
+        }
+        return "Unknown error";
+      }
+
+      function formatError(error) {
+        if (error && typeof error.message === "string") {
+          return error.message;
+        }
+        return "Unknown error";
+      }
+
+      function escapeHtml(input) {
+        return String(input)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function applyInlineMarkdown(text) {
+        return text
+          .replace(/`([^`]+)`/g, "<code>$1</code>")
+          .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+          .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      }
+
+      function markdownToHtml(markdown) {
+        const lines = escapeHtml(markdown).replace(/\r\n/g, "\n").split("\n");
+        const chunks = [];
+        let inList = false;
+
+        for (const rawLine of lines) {
+          const line = rawLine.trimEnd();
+          const trimmed = line.trim();
+
+          if (!trimmed) {
+            if (inList) {
+              chunks.push("</ul>");
+              inList = false;
+            }
+            continue;
+          }
+
+          if (trimmed.startsWith("### ")) {
+            if (inList) {
+              chunks.push("</ul>");
+              inList = false;
+            }
+            chunks.push(`<h3>${applyInlineMarkdown(trimmed.slice(4))}</h3>`);
+            continue;
+          }
+
+          if (trimmed.startsWith("## ")) {
+            if (inList) {
+              chunks.push("</ul>");
+              inList = false;
+            }
+            chunks.push(`<h2>${applyInlineMarkdown(trimmed.slice(3))}</h2>`);
+            continue;
+          }
+
+          if (trimmed.startsWith("# ")) {
+            if (inList) {
+              chunks.push("</ul>");
+              inList = false;
+            }
+            chunks.push(`<h1>${applyInlineMarkdown(trimmed.slice(2))}</h1>`);
+            continue;
+          }
+
+          if (trimmed.startsWith("- ")) {
+            if (!inList) {
+              chunks.push("<ul>");
+              inList = true;
+            }
+            chunks.push(`<li>${applyInlineMarkdown(trimmed.slice(2))}</li>`);
+            continue;
+          }
+
+          if (inList) {
+            chunks.push("</ul>");
+            inList = false;
+          }
+          chunks.push(`<p>${applyInlineMarkdown(trimmed)}</p>`);
+        }
+
+        if (inList) {
+          chunks.push("</ul>");
+        }
+
+        return chunks.join("");
+      }
+
+      function openPreviewModal(title, mode, content) {
+        previewModalTitle.textContent = title;
+        previewModalBody.innerHTML = "";
+
+        if (mode === "html") {
+          const container = document.createElement("div");
+          container.className = "markdown-view fullscreen-view";
+          container.innerHTML = content;
+          previewModalBody.appendChild(container);
+        } else {
+          const pre = document.createElement("pre");
+          pre.className = "fullscreen-pre";
+          pre.textContent = content;
+          previewModalBody.appendChild(pre);
+        }
+
+        previewModal.classList.remove("hidden");
+        previewModal.setAttribute("aria-hidden", "false");
+      }
+
+      function closePreviewModal() {
+        previewModal.classList.add("hidden");
+        previewModal.setAttribute("aria-hidden", "true");
+      }
+
+      function setSettingsStatus() {
+        const providerLabel = llmSettings.api_provider.toUpperCase();
+        const keyState = llmSettings.api_key ? "key saved" : "no key";
+        settingsStatus.textContent = `Provider ${providerLabel}, ${keyState}.`;
+      }
+
+      function loadSettings() {
+        try {
+          const raw = localStorage.getItem(SETTINGS_KEY);
+          if (!raw) {
+            setSettingsStatus();
+            return;
+          }
+          const parsed = JSON.parse(raw);
+          llmSettings = {
+            api_provider: ["groq", "openai", "anthropic"].includes(parsed.api_provider)
+              ? parsed.api_provider
+              : "groq",
+            api_key: typeof parsed.api_key === "string" && parsed.api_key.trim() ? parsed.api_key.trim() : null,
+          };
+        } catch (error) {
+          llmSettings = { api_provider: "groq", api_key: null };
+        }
+        setSettingsStatus();
+      }
+
+      function saveSettings() {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(llmSettings));
+        setSettingsStatus();
+      }
+
+      function openSettingsModal() {
+        settingsProviderInput.value = llmSettings.api_provider;
+        settingsApiKeyInput.value = llmSettings.api_key || "";
+        settingsModal.classList.remove("hidden");
+        settingsModal.setAttribute("aria-hidden", "false");
+      }
+
+      function closeSettingsModal() {
+        settingsModal.classList.add("hidden");
+        settingsModal.setAttribute("aria-hidden", "true");
+      }
+
+      function isSupportedFile(fileName) {
+        const lower = fileName.toLowerCase();
+        return supportedExtensions.some((ext) => lower.endsWith(ext));
+      }
+
+      function normalizeUrl(value) {
+        return value.trim().replace(/[;,]+$/, "");
+      }
+
+      function addUrlChip(rawValue) {
+        const normalized = normalizeUrl(rawValue);
+        if (!normalized) {
+          return;
+        }
+        if (urlChips.includes(normalized)) {
+          return;
+        }
+        urlChips.push(normalized);
+        renderUrlChips();
+      }
+
+      function removeUrlChip(index) {
+        urlChips.splice(index, 1);
+        renderUrlChips();
+      }
+
+      function renderUrlChips() {
+        urlChipList.innerHTML = "";
+        urlChips.forEach((url, index) => {
+          const chip = document.createElement("span");
+          chip.className = "chip";
+          chip.title = url;
+
+          const text = document.createElement("span");
+          text.className = "chip-text";
+          text.textContent = url;
+
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className = "chip-remove";
+          removeButton.textContent = "x";
+          removeButton.addEventListener("click", () => removeUrlChip(index));
+
+          chip.append(text, removeButton);
+          urlChipList.appendChild(chip);
+        });
+      }
+
+      function splitPastedUrls(rawText) {
+        return rawText
+          .split(/[\s,]+/)
+          .map((item) => normalizeUrl(item))
+          .filter((item) => item.length > 0);
+      }
+
+      async function collectDirectoryFiles(handle, prefix = "") {
+        const collected = [];
+        for await (const [entryName, entryHandle] of handle.entries()) {
+          const relativePath = prefix ? `${prefix}/${entryName}` : entryName;
+          if (entryHandle.kind === "directory") {
+            const nested = await collectDirectoryFiles(entryHandle, relativePath);
+            collected.push(...nested);
+            continue;
+          }
+          if (!isSupportedFile(entryName)) {
+            continue;
+          }
+          const file = await entryHandle.getFile();
+          const content = await file.text();
+          collected.push({ name: relativePath, content });
+        }
+        return collected;
+      }
+
+      async function collectFileList(files) {
+        const collected = [];
+        for (const file of files) {
+          if (!isSupportedFile(file.name)) {
+            continue;
+          }
+          const content = await file.text();
+          const relativePath = file.webkitRelativePath || file.name;
+          collected.push({ name: relativePath, content });
+        }
+        return collected;
+      }
+
+      function downloadTextFile(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      }
+
+      function setResultSummary(text, statusClass) {
+        resultElement.className = `result ${statusClass}`;
+        resultElement.textContent = text;
+      }
+
+      function renderResultMeta(lines) {
+        resultMetaElement.innerHTML = "";
+        lines.forEach((line) => {
+          const item = document.createElement("p");
+          item.textContent = line;
+          resultMetaElement.appendChild(item);
+        });
+      }
+
+      function setDigestRawVisibility(visible) {
+        digestRawVisible = visible;
+        if (visible && latestDigestContent) {
+          digestPreviewElement.textContent = latestDigestContent;
+          digestPreviewElement.classList.remove("hidden");
+          showDigestButton.textContent = "Hide Raw";
+        } else {
+          digestPreviewElement.classList.add("hidden");
+          showDigestButton.textContent = "Show Raw";
+        }
+      }
+
+      function setDigestRenderMode(enabled) {
+        digestRenderMode = enabled;
+        if (enabled && latestDigestContent) {
+          digestRenderedElement.innerHTML = markdownToHtml(latestDigestContent);
+          digestRenderedElement.classList.remove("hidden");
+          digestPreviewElement.classList.add("hidden");
+          renderDigestButton.textContent = "Hide Preview";
+        } else {
+          digestRenderedElement.classList.add("hidden");
+          renderDigestButton.textContent = "Render Preview";
+          if (digestRawVisible && latestDigestContent) {
+            digestPreviewElement.classList.remove("hidden");
+          }
+        }
+      }
+
+      function setJsonVisibility(visible) {
+        jsonVisible = visible;
+        if (visible && latestSourcesJsonContent) {
+          jsonPreviewElement.textContent = latestSourcesJsonContent;
+          jsonPreviewElement.classList.remove("hidden");
+          showJsonButton.textContent = "Hide JSON";
+        } else {
+          jsonPreviewElement.classList.add("hidden");
+          showJsonButton.textContent = "Show JSON";
+        }
+      }
+
+      function resetPreviewPanels() {
+        latestDigestContent = "";
+        latestSourcesJsonContent = "";
+        setDigestRenderMode(false);
+        setDigestRawVisibility(false);
+        setJsonVisibility(false);
+
+        downloadDigestButton.disabled = true;
+        downloadJsonButton.disabled = true;
+        showDigestButton.disabled = true;
+        renderDigestButton.disabled = true;
+        fullscreenDigestButton.disabled = true;
+        showJsonButton.disabled = true;
+        fullscreenJsonButton.disabled = true;
+      }
+
+      loadSettings();
+      resetPreviewPanels();
+
+      openSettingsButton.addEventListener("click", openSettingsModal);
+      closeSettingsButton.addEventListener("click", closeSettingsModal);
+      settingsModal.addEventListener("click", (event) => {
+        if (event.target === settingsModal) {
+          closeSettingsModal();
+        }
+      });
+      saveSettingsButton.addEventListener("click", () => {
+        llmSettings = {
+          api_provider: String(settingsProviderInput.value || "groq").trim().toLowerCase(),
+          api_key: String(settingsApiKeyInput.value || "").trim() || null,
+        };
+        saveSettings();
+        closeSettingsModal();
+      });
+
+      closePreviewModalButton.addEventListener("click", closePreviewModal);
+      previewModal.addEventListener("click", (event) => {
+        if (event.target === previewModal) {
+          closePreviewModal();
+        }
+      });
+
+      downloadDigestButton.addEventListener("click", () => {
+        if (!latestDigestContent) {
+          return;
+        }
+        downloadTextFile("digest.md", latestDigestContent, "text/markdown;charset=utf-8");
+      });
+
+      downloadJsonButton.addEventListener("click", () => {
+        if (!latestSourcesJsonContent) {
+          return;
+        }
+        downloadTextFile("sources.json", latestSourcesJsonContent, "application/json;charset=utf-8");
+      });
+
+      showDigestButton.addEventListener("click", () => {
+        if (!latestDigestContent) {
+          return;
+        }
+        if (digestRenderMode) {
+          setDigestRenderMode(false);
+        }
+        setDigestRawVisibility(!digestRawVisible);
+      });
+
+      renderDigestButton.addEventListener("click", () => {
+        if (!latestDigestContent) {
+          return;
+        }
+        if (!digestRenderMode) {
+          setDigestRawVisibility(false);
+        }
+        setDigestRenderMode(!digestRenderMode);
+      });
+
+      fullscreenDigestButton.addEventListener("click", () => {
+        if (!latestDigestContent) {
+          return;
+        }
+        if (digestRenderMode) {
+          openPreviewModal("Digest Preview", "html", digestRenderedElement.innerHTML || markdownToHtml(latestDigestContent));
+          return;
+        }
+        openPreviewModal("Digest Raw", "text", latestDigestContent);
+      });
+
+      showJsonButton.addEventListener("click", () => {
+        if (!latestSourcesJsonContent) {
+          return;
+        }
+        setJsonVisibility(!jsonVisible);
+      });
+
+      fullscreenJsonButton.addEventListener("click", () => {
+        if (!latestSourcesJsonContent) {
+          return;
+        }
+        openPreviewModal("Sources JSON", "text", latestSourcesJsonContent);
+      });
+
+      urlEntry.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === ",") {
+          event.preventDefault();
+          addUrlChip(urlEntry.value);
+          urlEntry.value = "";
+          return;
+        }
+        if (event.key === "Backspace" && !urlEntry.value && urlChips.length > 0) {
+          removeUrlChip(urlChips.length - 1);
+        }
+      });
+
+      urlEntry.addEventListener("paste", (event) => {
+        const clipboardText = event.clipboardData?.getData("text") || "";
+        const parsed = splitPastedUrls(clipboardText);
+        if (parsed.length === 0) {
+          return;
+        }
+        event.preventDefault();
+        parsed.forEach((value) => addUrlChip(value));
+      });
+
+      urlEntry.addEventListener("blur", () => {
+        if (!urlEntry.value.trim()) {
+          return;
+        }
+        addUrlChip(urlEntry.value);
+        urlEntry.value = "";
+      });
+
+      pickSourceFolderButton.addEventListener("click", async () => {
+        try {
+          if (window.showDirectoryPicker) {
+            const handle = await window.showDirectoryPicker();
+            const collected = await collectDirectoryFiles(handle);
+            selectedSourceFiles = collected;
+            folderPathInput.value = handle.name;
+            sourceStatus.textContent = `${collected.length} supported files selected from ${handle.name}.`;
+            return;
+          }
+          sourceFolderFallback.click();
+        } catch (error) {
+          sourceStatus.textContent = `Folder selection canceled: ${formatError(error)}`;
+        }
+      });
+
+      sourceFolderFallback.addEventListener("change", async (event) => {
+        const files = Array.from(event.target.files || []);
+        selectedSourceFiles = await collectFileList(files);
+        const rootName = files[0]?.webkitRelativePath?.split("/")[0] || "selected folder";
+        folderPathInput.value = rootName;
+        sourceStatus.textContent = `${selectedSourceFiles.length} supported files selected from ${rootName}.`;
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const data = new FormData(form);
+        const payload = {
+          topic: String(data.get("topic") || "").trim(),
+          urls: [...urlChips],
+          folder_path: String(data.get("folder_path") || "").trim() || null,
+          local_files: selectedSourceFiles,
+          grouping_threshold: Number(data.get("grouping_threshold") || 0.4),
+          api_provider: llmSettings.api_provider,
+          api_key: llmSettings.api_key,
+        };
+
+        if (payload.local_files.length > 0) {
+          payload.folder_path = null;
+        }
+
+        runButton.disabled = true;
+        setResultSummary("Running agent...", "running");
+        renderResultMeta([]);
+        resetPreviewPanels();
+
+        try {
+          const response = await fetch("/api/run", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(payload.api_key ? { "X-API-KEY": payload.api_key } : {}),
+              ...(payload.api_provider ? { "X-API-PROVIDER": payload.api_provider } : {}),
+            },
+            body: JSON.stringify(payload),
+          });
+
+          let body = null;
+          try {
+            body = await response.json();
+          } catch (error) {
+            body = null;
+          }
+
+          if (!response.ok) {
+            throw new Error(parseApiError(body?.detail ?? body ?? `${response.status} ${response.statusText}`));
+          }
+
+          const skippedCount = Array.isArray(body.skipped_sources) ? body.skipped_sources.length : 0;
+          setResultSummary(
+            `Done. Sources ${body.sources_processed}, claims ${body.claims_extracted}, groups ${body.claim_groups}, skipped ${skippedCount}.`,
+            "success"
+          );
+
+          const metaLines = [];
+          latestDigestContent = typeof body.digest_markdown === "string" ? body.digest_markdown : "";
+          latestSourcesJsonContent = JSON.stringify(body.sources_payload || {}, null, 2);
+
+          downloadDigestButton.disabled = !latestDigestContent;
+          downloadJsonButton.disabled = !latestSourcesJsonContent;
+          showDigestButton.disabled = !latestDigestContent;
+          renderDigestButton.disabled = !latestDigestContent;
+          fullscreenDigestButton.disabled = !latestDigestContent;
+          showJsonButton.disabled = !latestSourcesJsonContent;
+          fullscreenJsonButton.disabled = !latestSourcesJsonContent;
+
+          if (skippedCount > 0) {
+            const skippedPreview = body.skipped_sources
+              .slice(0, 2)
+              .map((item) => `${item.source} (${item.reason})`)
+              .join("; ");
+            metaLines.push(`Skipped: ${skippedPreview}`);
+          }
+          renderResultMeta(metaLines);
+        } catch (error) {
+          setResultSummary(`Run failed: ${formatError(error)}`, "error");
+          renderResultMeta([]);
+          resetPreviewPanels();
+        } finally {
+          runButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

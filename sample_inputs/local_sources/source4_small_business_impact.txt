@@ -1,0 +1,3 @@
+Community software founders report that legal uncertainty already slows AI adoption in local industries.
+They argue that predictable and staged compliance timelines are necessary so smaller teams can adapt.
+The founders support audits for high-risk deployments but request grants or fee waivers for startups.

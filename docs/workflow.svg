@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="520" viewBox="0 0 1400 520" role="img" aria-label="Research Agent workflow diagram">
+  <defs>
+    <style>
+      .title { font: 700 28px 'Poppins', 'Segoe UI', Arial, sans-serif; fill: #0b1f3a; }
+      .label { font: 600 16px 'Open Sans', 'Segoe UI', Arial, sans-serif; fill: #102b4e; }
+      .small { font: 400 13px 'Open Sans', 'Segoe UI', Arial, sans-serif; fill: #34495e; }
+      .card { fill: #ffffff; stroke: #d8e0e8; stroke-width: 2; rx: 12; }
+      .accent { fill: #fff8eb; stroke: #d9c487; stroke-width: 2; rx: 12; }
+      .line { stroke: #0b1f3a; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .bg { fill: #f7f9fc; }
+    </style>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0b1f3a" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="520" />
+  <text class="title" x="40" y="48">Semantic Research Digest Workflow</text>
+
+  <rect class="accent" x="40" y="90" width="170" height="95" rx="12" />
+  <text class="label" x="65" y="125">Input Sources</text>
+  <text class="small" x="65" y="148">URLs / folder / uploads</text>
+  <text class="small" x="65" y="168">topic + runtime config</text>
+
+  <rect class="card" x="250" y="90" width="190" height="95" rx="12" />
+  <text class="label" x="275" y="125">Ingestion</text>
+  <text class="small" x="275" y="148">fetch + parse + clean</text>
+  <text class="small" x="275" y="168">dedupe by hash</text>
+
+  <rect class="card" x="480" y="90" width="230" height="95" rx="12" />
+  <text class="label" x="505" y="125">Claim Extraction</text>
+  <text class="small" x="505" y="148">LLM extraction (preferred)</text>
+  <text class="small" x="505" y="168">heuristic fallback</text>
+
+  <rect class="card" x="750" y="90" width="180" height="95" rx="12" />
+  <text class="label" x="775" y="125">Embeddings</text>
+  <text class="small" x="775" y="148">MiniLM sentence vectors</text>
+  <text class="small" x="775" y="168">GPU if available</text>
+
+  <rect class="card" x="970" y="90" width="190" height="95" rx="12" />
+  <text class="label" x="995" y="125">Clustering</text>
+  <text class="small" x="995" y="148">Agglomerative cosine</text>
+  <text class="small" x="995" y="168">distance threshold</text>
+
+  <rect class="card" x="1190" y="90" width="170" height="95" rx="12" />
+  <text class="label" x="1215" y="125">Stance</text>
+  <text class="small" x="1215" y="148">LLM adjudication</text>
+  <text class="small" x="1215" y="168">NLI fallback</text>
+
+  <path class="line" d="M 210 137 L 250 137" />
+  <path class="line" d="M 440 137 L 480 137" />
+  <path class="line" d="M 710 137 L 750 137" />
+  <path class="line" d="M 930 137 L 970 137" />
+  <path class="line" d="M 1160 137 L 1190 137" />
+
+  <rect class="accent" x="280" y="270" width="300" height="120" rx="12" />
+  <text class="label" x="305" y="305">Digest Builder</text>
+  <text class="small" x="305" y="329">canonical claims</text>
+  <text class="small" x="305" y="349">supporting / contradicting sources</text>
+  <text class="small" x="305" y="369">confidence + evidence list</text>
+
+  <rect class="accent" x="640" y="270" width="300" height="120" rx="12" />
+  <text class="label" x="665" y="305">Persistence</text>
+  <text class="small" x="665" y="329">outputs/latest/digest.md</text>
+  <text class="small" x="665" y="349">outputs/latest/sources.json</text>
+  <text class="small" x="665" y="369">optional Chroma upsert</text>
+
+  <rect class="card" x="1000" y="270" width="300" height="120" rx="12" />
+  <text class="label" x="1025" y="305">UI + API Response</text>
+  <text class="small" x="1025" y="329">run summary + previews</text>
+  <text class="small" x="1025" y="349">download digest/json</text>
+  <text class="small" x="1025" y="369">mode logs in terminal</text>
+
+  <path class="line" d="M 1275 185 L 1275 250" />
+  <path class="line" d="M 1275 250 L 580 250" />
+  <path class="line" d="M 580 250 L 580 300" />
+
+  <path class="line" d="M 580 330 L 640 330" />
+  <path class="line" d="M 940 330 L 1000 330" />
+</svg>
