@@ -1,6 +1,8 @@
 # Semantic Research Digest Agent
 
 Semantic research pipeline built with FastAPI + LangGraph.
+🎥 **Demo Video:**  
+https://drive.google.com/file/d/1W8hX3BtRpwsJO4wmTpYPuzXrIGmBu-Yy/view?usp=sharing
 
 The app ingests sources (URLs, local folders, uploaded files), extracts grounded claims, clusters semantically similar claims, adjudicates support vs contradiction, and writes:
 
