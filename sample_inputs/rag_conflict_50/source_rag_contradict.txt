@@ -1,3 +1,0 @@
-RAG does not reduce hallucinations in factual QA systems when retrieval quality is poor.
-In our noisy-retrieval test set, the same RAG pipeline increased hallucination rate from 9% to 15%.
-If the retriever returns stale or irrelevant chunks, the model may produce confident but incorrect answers.

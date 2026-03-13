@@ -6,6 +6,7 @@ import sys
 
 from research_agent.core.graph import run_research_digest
 from research_agent.models import RuntimeConfig
+from research_agent.config import configure_langsmith, get_settings
 
 
 def _parse_urls(raw_values: list[str] | None) -> list[str]:
@@ -79,6 +80,7 @@ async def _run_async(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_langsmith(get_settings())
     parser = build_parser()
     args = parser.parse_args(argv)
     return asyncio.run(_run_async(args))

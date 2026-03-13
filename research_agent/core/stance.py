@@ -11,6 +11,7 @@ from research_agent.config import RuntimeLLMConfig, Settings
 from research_agent.core.clustering import select_canonical_claim
 from research_agent.models import ClaimCluster, ClaimRecord
 from research_agent.models.claim_models import StanceLabel
+from pydantic import SecretStr
 
 try:
     from transformers import pipeline
@@ -68,12 +69,16 @@ class StanceService:
 
         provider = runtime.provider
         model_name = runtime.model_name or self.settings.default_model_name
-        api_key = runtime.api_key
+        api_key = SecretStr(runtime.api_key)
 
         if provider == "groq" and ChatGroq is not None:
-            llm = ChatGroq(model=model_name, api_key=api_key, temperature=0)
+            llm = ChatGroq(model=model_name, api_key=api_key, temperature=0)  # pyright: ignore[reportArgumentType]
         elif provider == "openai" and ChatOpenAI is not None:
-            llm = ChatOpenAI(model=model_name or "gpt-4o-mini", api_key=api_key, temperature=0)  # pyright: ignore[reportArgumentType]
+            llm = ChatOpenAI(
+                model=model_name or "gpt-4o-mini",
+                api_key=api_key,
+                temperature=0,
+            )  # pyright: ignore[reportArgumentType]
         elif provider == "anthropic" and ChatAnthropic is not None:
             llm = ChatAnthropic(
                 model=model_name or "claude-3-5-haiku-latest",
@@ -199,7 +204,19 @@ class StanceService:
 
         try:
             if hasattr(chain, "ainvoke"):
-                result = await chain.ainvoke(payload)
+                source_ids = sorted({claim.source_id for claim in claims})
+                result = await chain.ainvoke(
+                    payload,
+                    config={
+                        "run_name": f"adjudicate_cluster:{'-'.join(source_ids) or 'cluster'}",
+                        "tags": ["research_agent", "stance"],
+                        "metadata": {
+                            "canonical_claim": canonical_claim,
+                            "source_ids": source_ids,
+                            "claim_count": len(claims),
+                        },
+                    },
+                )
             else:
                 result = await asyncio.to_thread(chain.invoke, payload)
         except Exception as exc:  # noqa: BLE001

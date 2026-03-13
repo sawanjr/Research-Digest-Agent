@@ -1,3 +1,0 @@
-RAG reduces hallucinations in factual QA systems by grounding generation in retrieved passages.
-In our internal test set, a RAG pipeline cut hallucination rate from 16% to 8%.
-When retrieval quality is high, RAG improves citation accuracy and factual consistency.

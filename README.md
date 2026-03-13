@@ -60,7 +60,7 @@ Compatibility wrappers remain under `app/` (`app.main`, `app.runner`, `app.graph
 ### 1) Clone from GitHub
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/sawanjr/Research-Digest-Agent.git
 cd "Research Agent"
 ```
 
@@ -129,6 +129,36 @@ Runtime key/provider precedence:
 
 In the UI, provider/key are configured via the **LLM Settings** popup and stored locally in browser storage.
 
+## LangSmith tracing
+
+LangSmith can trace LangChain/LangGraph LLM calls used by:
+
+- claim extraction (LLM path)
+- cluster adjudication (LLM stance/confidence path)
+
+1) Create a LangSmith account and API key.
+
+2) Set these in `.env`:
+
+```env
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=...
+LANGSMITH_PROJECT=research-digest-agent
+LANGSMITH_ENDPOINT=https://api.smith.langchain.com
+```
+
+Notes:
+
+- The app configures `LANGCHAIN_TRACING_V2`, `LANGCHAIN_PROJECT`, and `LANGCHAIN_ENDPOINT` automatically when `LANGSMITH_TRACING=true` (compat for LangChain versions that still read the `LANGCHAIN_*` env vars).
+- You can also set `LANGCHAIN_API_KEY` instead of `LANGSMITH_API_KEY` if you prefer, but `LANGSMITH_API_KEY` is recommended.
+
+3) Start the server and run a job.
+
+You should see traces grouped under the project name. Each run is tagged:
+
+- `research_agent`, `extraction`
+- `research_agent`, `stance`
+
 ## GPU usage
 
 The app automatically prefers GPU when available:
@@ -157,8 +187,10 @@ Open browser at `http://127.0.0.1:8000`.
 ## Run from CLI
 
 ```bash
-python -m app.runner --topic "RAG" --folder-path "sample_inputs/local_sources"
+python -m app.runner --topic "RAG" --folder-path "inputs/local_sources"
 ```
+
+`sample_inputs/` is intentionally git-ignored; keep any local datasets there if you want, but don’t rely on it existing in fresh clones.
 
 Useful options:
 

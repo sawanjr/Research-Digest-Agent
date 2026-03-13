@@ -9,10 +9,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from research_agent.api.routes import router
-from research_agent.config import configure_logging
+from research_agent.config import configure_langsmith, configure_logging, get_settings
 
 
 configure_logging()
+configure_langsmith(get_settings())
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

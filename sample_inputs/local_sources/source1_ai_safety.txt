@@ -1,3 +1,0 @@
-Independent safety labs reported that high-risk AI systems can fail in rare but severe ways.
-The labs recommend mandatory external audits before public release for systems used in healthcare, law, and finance.
-A policy brief notes that clear audit trails make it easier for regulators to investigate incidents.

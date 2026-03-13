@@ -130,7 +130,19 @@ class ClaimExtractionService:
 
         try:
             if hasattr(chain, "ainvoke"):
-                result = await chain.ainvoke(payload)
+                result = await chain.ainvoke(
+                    payload,
+                    config={
+                        "run_name": f"extract_claims:{source.source_id}",
+                        "tags": ["research_agent", "extraction"],
+                        "metadata": {
+                            "topic": topic,
+                            "source_id": source.source_id,
+                            "source_url": source.source_url,
+                            "source_title": source.title,
+                        },
+                    },
+                )
             else:
                 result = await asyncio.to_thread(chain.invoke, payload)
         except Exception as exc:  # noqa: BLE001
